@@ -13,8 +13,6 @@ Funcionalidades:
 - Persistência de dados no GitHub
 - Interface web responsiva
 
-Formato JSON: {id: {nome, senha}}
-
 Autor: Sistema Tenebris RPG
 Data: 2025
 """
@@ -26,10 +24,10 @@ import base64             # Biblioteca para codificar/decodificar arquivos em ba
 import json               # Biblioteca para manipular dados JSON
 
 # ===== CONFIGURAÇÕES GLOBAIS =====
-#"""
-#Configurações essenciais para conexão com o repositório GitHub
-#que serve como banco de dados do sistema.
-#"""
+
+# Configurações essenciais para conexão com o repositório GitHub
+# que serve como banco de dados do sistema.
+
 REPO = "ABMS-NS/tenebris-RPG"        # Nome do repositório GitHub no formato usuário/repositório
 ARQUIVO_JSON = "usuarios.json"        # Nome do arquivo JSON que armazena os dados dos usuários
 BRANCH = "main"                       # Branch principal do repositório onde estão os arquivos
@@ -48,7 +46,7 @@ def carregar_usuarios():
     5. Converte de JSON para objeto Python
     
     Returns:
-        dict: Dicionário com formato {id: {nome, senha}}
+        list: Lista de dicionários contendo os dados dos usuários
         
     Raises:
         SystemExit: Para a execução se não conseguir carregar o arquivo
@@ -81,42 +79,39 @@ def carregar_usuarios():
 # ===== FUNÇÃO: VERIFICAR LOGIN =====
 def verificar_login(usuario, senha, usuarios):
     """
-    Verifica se as credenciais de login são válidas e retorna os dados do usuário.
+    Verifica se as credenciais de login são válidas.
     
-    Percorre o dicionário de usuários e compara o nome de usuário e senha
+    Percorre a lista de usuários e compara o nome de usuário e senha
     fornecidos com os dados armazenados.
     
     Args:
         usuario (str): Nome de usuário fornecido
         senha (str): Senha fornecida
-        usuarios (dict): Dicionário de usuários carregado do GitHub {id: {nome, senha}}
+        usuarios (list): Lista de usuários carregada do GitHub
         
     Returns:
-        tuple: (sucesso, user_id, dados_usuario)
-            sucesso (bool): True se as credenciais forem válidas
-            user_id (str): ID do usuário ou None se inválido
-            dados_usuario (dict): Dados do usuário ou None se inválido
+        bool: True se as credenciais forem válidas, False caso contrário
     """
-    # Percorre todos os usuários no dicionário
-    for user_id, dados in usuarios.items():
+    # Percorre todos os usuários na lista
+    for u in usuarios:
         # Verifica se o usuário e senha coincidem
-        if dados["nome"] == usuario and dados["senha"] == senha:
-            return True, user_id, dados  # Retorna True, ID e dados do usuário
-    return False, None, None  # Login inválido
+        if u["usuario"] == usuario and u["senha"] == senha:
+            return True  # Login válido
+    return False  # Login inválido
 
 # ===== FUNÇÃO: SALVAR USUÁRIOS NO GITHUB =====
 def salvar_usuarios(usuarios):
     """
-    Salva o dicionário atualizado de usuários no arquivo JSON do GitHub.
+    Salva a lista atualizada de usuários no arquivo JSON do GitHub.
     
     Processo:
     1. Obtém o SHA atual do arquivo (necessário para atualização)
-    2. Converte o dicionário de usuários para JSON
+    2. Converte a lista de usuários para JSON
     3. Codifica em base64
     4. Faz commit da atualização no GitHub
     
     Args:
-        usuarios (dict): Dicionário atualizado de usuários
+        usuarios (list): Lista atualizada de usuários
         
     Returns:
         bool: True se salvou com sucesso, False caso contrário
@@ -142,7 +137,7 @@ def salvar_usuarios(usuarios):
     # Debug: Mostra os dados que serão salvos
     print(f"Debug: Dados que serão salvos: {usuarios}")
     
-    # Converte o dicionário de usuários para string JSON formatada
+    # Converte a lista de usuários para string JSON formatada
     # ensure_ascii=False permite caracteres especiais
     # indent=2 formata o JSON de forma legível
     conteudo_json = json.dumps(usuarios, indent=2, ensure_ascii=False)
@@ -178,15 +173,15 @@ def usuario_existe(usuario, usuarios):
     
     Args:
         usuario (str): Nome de usuário a ser verificado
-        usuarios (dict): Dicionário de usuários existentes
+        usuarios (list): Lista de usuários existentes
         
     Returns:
         bool: True se o usuário já existe, False caso contrário
     """
-    # Percorre todos os usuários no dicionário
-    for dados in usuarios.values():
+    # Percorre a lista de usuários
+    for u in usuarios:
         # Verifica se o nome de usuário já existe
-        if dados["nome"] == usuario:
+        if u["usuario"] == usuario:
             return True  # Usuário já existe
     return False  # Usuário não existe
 
@@ -195,35 +190,33 @@ def obter_proximo_id(usuarios):
     """
     Calcula o próximo ID disponível para um novo usuário.
     
-    Percorre todos os IDs existentes e encontra o maior ID,
+    Percorre todos os usuários existentes e encontra o maior ID,
     então retorna o próximo número sequencial.
     
     Args:
-        usuarios (dict): Dicionário de usuários existentes
+        usuarios (list): Lista de usuários existentes
         
     Returns:
-        str: Próximo ID disponível
+        int: Próximo ID disponível
     """
     if not usuarios:  # Se não há usuários, começa com ID 1
-        return "1"
+        return 1
     
     # Lista para armazenar todos os IDs encontrados
     ids_existentes = []
     
-    # Percorre todos os IDs e converte para inteiro
-    for user_id in usuarios.keys():
-        try:
-            ids_existentes.append(int(user_id))
-        except ValueError:
-            # Se não conseguir converter para int, ignora
-            continue
+    # Percorre todos os usuários e coleta os IDs
+    for u in usuarios:
+        # Verifica se o usuário tem campo 'id'
+        if 'id' in u and isinstance(u['id'], int):
+            ids_existentes.append(u['id'])
     
-    # Se não há IDs válidos, começa com 1
+    # Se não há IDs existentes, começa com 1
     if not ids_existentes:
-        return "1"
+        return 1
     
-    # Retorna o maior ID + 1 como string
-    return str(max(ids_existentes) + 1)
+    # Retorna o maior ID + 1
+    return max(ids_existentes) + 1
 
 # ===== FUNÇÃO: CADASTRAR NOVO USUÁRIO =====
 def cadastrar_usuario(usuario, senha, usuarios):
@@ -234,13 +227,13 @@ def cadastrar_usuario(usuario, senha, usuarios):
     1. Verifica se o usuário já existe
     2. Gera um novo ID automático
     3. Cria o objeto do novo usuário
-    4. Adiciona ao dicionário de usuários
+    4. Adiciona à lista de usuários
     5. Salva no GitHub
     
     Args:
         usuario (str): Nome de usuário
         senha (str): Senha do usuário
-        usuarios (dict): Dicionário atual de usuários
+        usuarios (list): Lista atual de usuários
         
     Returns:
         tuple: (sucesso, mensagem)
@@ -254,20 +247,21 @@ def cadastrar_usuario(usuario, senha, usuarios):
     # Gera o próximo ID disponível
     novo_id = obter_proximo_id(usuarios)
     
-    # Cria o objeto do novo usuário
+    # Cria o objeto do novo usuário com ID, usuário e senha
     novo_usuario = {
-        "nome": usuario,
+        "id": novo_id,
+        "usuario": usuario,
         "senha": senha
     }
     
     # Debug: Mostra o novo usuário que será adicionado
-    print(f"Debug: Novo usuário criado: ID {novo_id} -> {novo_usuario}")
+    print(f"Debug: Novo usuário criado: {novo_usuario}")
     
-    # Adiciona o novo usuário ao dicionário
-    usuarios[novo_id] = novo_usuario
+    # Adiciona o novo usuário à lista
+    usuarios.append(novo_usuario)
     
-    # Debug: Mostra o dicionário completo antes de salvar
-    print(f"Debug: Dicionário de usuários antes de salvar: {usuarios}")
+    # Debug: Mostra a lista completa antes de salvar
+    print(f"Debug: Lista de usuários antes de salvar: {usuarios}")
     
     # Tenta salvar no GitHub
     if salvar_usuarios(usuarios):
@@ -304,18 +298,14 @@ def pagina_login():
         if st.button("Entrar", key="btn_login"):
             # Verifica se os campos estão preenchidos
             if usuario_login and senha_login:
-                # Carrega o dicionário de usuários do GitHub
+                # Carrega a lista de usuários do GitHub
                 usuarios = carregar_usuarios()
                 
-                # Verifica as credenciais e obtém os dados do usuário
-                login_valido, user_id, dados_usuario = verificar_login(usuario_login, senha_login, usuarios)
-                
-                if login_valido:
+                # Verifica as credenciais
+                if verificar_login(usuario_login, senha_login, usuarios):
                     # Login bem-sucedido - atualiza o estado da sessão
                     st.session_state["logado"] = True
-                    st.session_state["usuario"] = dados_usuario["nome"]
-                    st.session_state["id"] = user_id
-                    st.session_state["dados_usuario"] = dados_usuario
+                    st.session_state["usuario"] = usuario_login
                     # Recarrega a página para mostrar a área logada
                     st.rerun()
                 else:
@@ -342,7 +332,7 @@ def pagina_login():
                 if senha_cadastro == confirmar_senha:
                     # Verifica critérios mínimos de segurança
                     if len(usuario_cadastro) >= 3 and len(senha_cadastro) >= 4:
-                        # Carrega dicionário atual de usuários
+                        # Carrega lista atual de usuários
                         usuarios = carregar_usuarios()
                         
                         # Tenta cadastrar o novo usuário
@@ -376,36 +366,31 @@ def pagina_principal():
     # Título da página principal
     st.title("Página Principal")
     
-    # Mensagem de boas-vindas personalizada usando o ID do usuário
-    usuario_nome = st.session_state.get("usuario", "Usuário")
-    usuario_id = st.session_state.get("id", "N/A")
-    
-    st.write(f"Bem-vindo, {usuario_nome} (ID: {usuario_id})! Saiba que você é o ser mais desprezível do mundo, eu odeio você seu pedaço de merda ambulante (me estessei fazendo codio de novo)")
+    # Mensagem de boas-vindas personalizada
+    st.write(f"Bem-vindo, {st.session_state['id']}! Saiba que você é o ser mais desprezível do mundo, eu odeio você seu pedaço de merda ambulante (me estessei fazendo codio de novo)")
 
     # Botão de logout
     if st.button("Sair"):
         # Limpa o estado da sessão
         st.session_state["logado"] = False
         st.session_state["usuario"] = None
-        st.session_state["id"] = None
-        st.session_state["dados_usuario"] = None
         # Recarrega a página para mostrar a tela de login
         st.rerun()
 
 # ===== CONFIGURAÇÃO INICIAL DA INTERFACE =====
-#"""
-#Configurações iniciais da página web antes de renderizar o conteúdo.
-#"""
+
+# Configurações iniciais da página web antes de renderizar o conteúdo.
+
 st.set_page_config(
     page_title="Login Tenebris",    # Título da aba do navegador
     page_icon="🌒"                  # Ícone da aba do navegador
 )
 
 # ===== INICIALIZAÇÃO DO ESTADO DA SESSÃO =====
-#"""
-#Inicializa as variáveis de estado da sessão se elas não existirem.
-#O Streamlit mantém essas variáveis entre as execuções da aplicação.
-#"""
+
+# Inicializa as variáveis de estado da sessão se elas não existirem.
+# O Streamlit mantém essas variáveis entre as execuções da aplicação.
+
 # Verifica se o usuário está logado
 if "logado" not in st.session_state:
     st.session_state["logado"] = False
@@ -414,18 +399,10 @@ if "logado" not in st.session_state:
 if "usuario" not in st.session_state:
     st.session_state["usuario"] = None
 
-# Armazena o ID do usuário logado
-if "id" not in st.session_state:
-    st.session_state["id"] = None
-
-# Armazena todos os dados do usuário logado
-if "dados_usuario" not in st.session_state:
-    st.session_state["dados_usuario"] = None
-
 # ===== CONTROLE DE FLUXO PRINCIPAL =====
-# """
-#Controla qual página será exibida baseado no estado de login.
-#"""
+#
+# Controla qual página será exibida baseado no estado de login.
+# 
 # Se o usuário não está logado, mostra a página de login
 if not st.session_state["logado"]:
     pagina_login()
