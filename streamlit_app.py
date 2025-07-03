@@ -373,7 +373,6 @@ def pagina_principal():
         # Mensagem de boas-vindas personalizada
         st.write(f"Bem-vindo, {st.session_state['usuario']}! Saiba que você é o ser mais desprezível do mundo, eu odeio você seu pedaço de merda ambulante (me estessei fazendo codio de novo)")
 
-
     elif pagina == "Sobre":
         st.title("Sobre")
         st.write("Essa é a página Sobre.")
