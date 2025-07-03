@@ -1,4 +1,5 @@
 import streamlit as st
 
-st.title("Página Inicial")
-st.write("Conteúdo da página inicial")
+def inicial_page():
+    st.title("Página Inicial")
+    st.write("Conteúdo da página inicial")
