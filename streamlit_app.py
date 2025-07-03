@@ -22,7 +22,7 @@ import streamlit as st      # Framework web para criar interfaces interativas
 import requests            # Biblioteca para fazer requisições HTTP ao GitHub API
 import base64             # Biblioteca para codificar/decodificar arquivos em base64
 import json               # Biblioteca para manipular dados JSON
-from home import * # Importa funções auxiliares do módulo home.py (se necessário)
+
 # ===== CONFIGURAÇÕES GLOBAIS =====
 
 # Configurações essenciais para conexão com o repositório GitHub
@@ -364,7 +364,34 @@ def pagina_principal():
     oferece a opção de logout.
     """
     
-    home.pagina_principal()  # Chama a função de página principal do módulo home.py
+    st.title("Página Principal")
+        # Mensagem de boas-vindas personalizada
+    st.write(f"Bem-vindo, {st.session_state['usuario']}! Saiba que você é o ser mais desprezível do mundo, eu odeio você seu pedaço de merda ambulante (me estessei fazendo codio de novo)")
+    
+    # Menu lateral estilo lista
+    pagina = st.sidebar.radio("Navegação", ["🏠 Início", "🎲 Mesas", "⚙️ Configurações"])
+
+    # Conteúdo da página
+    st.title(pagina)
+
+    if "Início" in pagina:
+        st.write("Bem-vindo ao Tenebris RPG!")
+
+    elif "Mesas" in pagina:
+        st.write("Aqui estão as mesas de RPG.")
+
+    elif "Configurações" in pagina:
+        st.write("Altere as configurações do sistema.")
+    
+    
+    
+    # Botão de logout
+    if st.button("Sair"):
+        # Limpa o estado da sessão
+        st.session_state["logado"] = False
+        st.session_state["usuario"] = None
+        # Recarrega a página para mostrar a tela de login
+        st.rerun()
 
 # ===== CONFIGURAÇÃO INICIAL DA INTERFACE =====
 
