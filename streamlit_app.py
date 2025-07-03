@@ -24,10 +24,10 @@ import base64             # Biblioteca para codificar/decodificar arquivos em ba
 import json               # Biblioteca para manipular dados JSON
 
 # ===== CONFIGURAÇÕES GLOBAIS =====
-"""
-Configurações essenciais para conexão com o repositório GitHub
-que serve como banco de dados do sistema.
-"""
+
+# Configurações essenciais para conexão com o repositório GitHub
+# que serve como banco de dados do sistema.
+
 REPO = "ABMS-NS/tenebris-RPG"        # Nome do repositório GitHub no formato usuário/repositório
 ARQUIVO_JSON = "usuarios.json"        # Nome do arquivo JSON que armazena os dados dos usuários
 BRANCH = "main"                       # Branch principal do repositório onde estão os arquivos
@@ -378,19 +378,19 @@ def pagina_principal():
         st.rerun()
 
 # ===== CONFIGURAÇÃO INICIAL DA INTERFACE =====
-"""
-Configurações iniciais da página web antes de renderizar o conteúdo.
-"""
+
+# Configurações iniciais da página web antes de renderizar o conteúdo.
+
 st.set_page_config(
     page_title="Login Tenebris",    # Título da aba do navegador
     page_icon="🌒"                  # Ícone da aba do navegador
 )
 
 # ===== INICIALIZAÇÃO DO ESTADO DA SESSÃO =====
-"""
-Inicializa as variáveis de estado da sessão se elas não existirem.
-O Streamlit mantém essas variáveis entre as execuções da aplicação.
-"""
+
+# Inicializa as variáveis de estado da sessão se elas não existirem.
+# O Streamlit mantém essas variáveis entre as execuções da aplicação.
+
 # Verifica se o usuário está logado
 if "logado" not in st.session_state:
     st.session_state["logado"] = False
@@ -400,9 +400,9 @@ if "usuario" not in st.session_state:
     st.session_state["usuario"] = None
 
 # ===== CONTROLE DE FLUXO PRINCIPAL =====
-"""
-Controla qual página será exibida baseado no estado de login.
-"""
+#
+# Controla qual página será exibida baseado no estado de login.
+# 
 # Se o usuário não está logado, mostra a página de login
 if not st.session_state["logado"]:
     pagina_login()
