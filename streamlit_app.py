@@ -134,10 +134,19 @@ def salvar_usuarios(usuarios):
         st.error("❌ Erro ao acessar o arquivo no GitHub.")
         return False
     
+    # Debug: Mostra os dados que serão salvos
+    print(f"Debug: Dados que serão salvos: {usuarios}")
+    
     # Converte a lista de usuários para string JSON formatada
+    # ensure_ascii=False permite caracteres especiais
+    # indent=2 formata o JSON de forma legível
     conteudo_json = json.dumps(usuarios, indent=2, ensure_ascii=False)
+    
+    # Debug: Mostra o JSON que será enviado
+    print(f"Debug: JSON gerado: {conteudo_json}")
+    
     # Codifica em base64 (formato exigido pela API do GitHub)
-    conteudo_base64 = base64.b64encode(conteudo_json.encode()).decode()
+    conteudo_base64 = base64.b64encode(conteudo_json.encode('utf-8')).decode('utf-8')
     
     # Prepara os dados para o commit
     dados = {
@@ -149,6 +158,12 @@ def salvar_usuarios(usuarios):
     
     # Faz o commit (PUT request)
     response = requests.put(url, headers=headers, json=dados)
+    
+    # Debug: Mostra o resultado da operação
+    print(f"Debug: Status da resposta: {response.status_code}")
+    if response.status_code != 200:
+        print(f"Debug: Erro na resposta: {response.text}")
+    
     return response.status_code == 200  # Retorna True se sucesso (código 200)
 
 # ===== FUNÇÃO: VERIFICAR SE USUÁRIO JÁ EXISTE =====
@@ -187,15 +202,21 @@ def obter_proximo_id(usuarios):
     if not usuarios:  # Se não há usuários, começa com ID 1
         return 1
     
-    # Encontra o maior ID existente
-    max_id = 0
-    for u in usuarios:
-        # Verifica se o usuário tem campo 'id' e se é maior que o atual
-        if 'id' in u and u['id'] > max_id:
-            max_id = u['id']
+    # Lista para armazenar todos os IDs encontrados
+    ids_existentes = []
     
-    # Retorna o próximo ID (maior ID + 1)
-    return max_id + 1
+    # Percorre todos os usuários e coleta os IDs
+    for u in usuarios:
+        # Verifica se o usuário tem campo 'id'
+        if 'id' in u and isinstance(u['id'], int):
+            ids_existentes.append(u['id'])
+    
+    # Se não há IDs existentes, começa com 1
+    if not ids_existentes:
+        return 1
+    
+    # Retorna o maior ID + 1
+    return max(ids_existentes) + 1
 
 # ===== FUNÇÃO: CADASTRAR NOVO USUÁRIO =====
 def cadastrar_usuario(usuario, senha, usuarios):
@@ -233,8 +254,14 @@ def cadastrar_usuario(usuario, senha, usuarios):
         "senha": senha
     }
     
+    # Debug: Mostra o novo usuário que será adicionado
+    print(f"Debug: Novo usuário criado: {novo_usuario}")
+    
     # Adiciona o novo usuário à lista
     usuarios.append(novo_usuario)
+    
+    # Debug: Mostra a lista completa antes de salvar
+    print(f"Debug: Lista de usuários antes de salvar: {usuarios}")
     
     # Tenta salvar no GitHub
     if salvar_usuarios(usuarios):
