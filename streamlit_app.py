@@ -135,8 +135,10 @@ def pagina_login():
 
 # ===== Função: Página Principal =====
 def pagina_principal():
-    st.title("✅ DEU CERTO")
-    
+    st.title("Página Principal")
+    st.write(f"Bem-vindo, {st.session_state['usuario']}! Saiba que você é o ser mais desprezível do mundo, eu odeio você seu pedaço de merda ambulante (me estessei fazendo codio de novo)")
+
+
     if st.button("Sair"):
         st.session_state["logado"] = False
         st.session_state["usuario"] = None
