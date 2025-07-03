@@ -369,6 +369,21 @@ def pagina_principal():
     # Mensagem de boas-vindas personalizada
     st.write(f"Bem-vindo, {st.session_state['usuario']}! Saiba que você é o ser mais desprezível do mundo, eu odeio você seu pedaço de merda ambulante (me estessei fazendo codio de novo)")
 
+    # Barra lateral com opções de páginas
+    pagina = st.sidebar.selectbox("Navegação", ["Início", "Sobre", "Configurações"])
+
+    # Conteúdo conforme a opção escolhida
+    if pagina == "Início":
+        st.title("Página Inicial")
+        st.write("Bem-vindo à página inicial!")
+
+    elif pagina == "Sobre":
+        st.title("Sobre")
+        st.write("Essa é a página Sobre.")
+
+    elif pagina == "Configurações":
+        st.title("Configurações")
+        st.write("Configure seu app aqui.")
     # Botão de logout
     if st.button("Sair"):
         # Limpa o estado da sessão
