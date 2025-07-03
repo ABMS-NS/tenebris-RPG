@@ -367,7 +367,7 @@ def pagina_principal():
     st.title("Página Principal")
     
     # Mensagem de boas-vindas personalizada
-    st.write(f"Bem-vindo, {st.session_state['usuario']}! Saiba que você é o ser mais desprezível do mundo, eu odeio você seu pedaço de merda ambulante (me estessei fazendo codio de novo)")
+    st.write(f"Bem-vindo, {st.session_state['id']}! Saiba que você é o ser mais desprezível do mundo, eu odeio você seu pedaço de merda ambulante (me estessei fazendo codio de novo)")
 
     # Botão de logout
     if st.button("Sair"):
