@@ -5,7 +5,7 @@ import json
 
 # ===== CONFIGURAÇÕES =====
 REPO = "ABMS-NS/tenebris-RPG"
-ARQUIVO_JSON = "usuarios.json"
+ARQUIVO_JSON = "data/usuarios.json"  # Caminho corrigido
 BRANCH = "main"
 TOKEN = st.secrets["GITHUB_TOKEN"]
 
@@ -24,6 +24,7 @@ def carregar_usuarios():
         return json.loads(conteudo)
     else:
         st.error("❌ Não foi possível carregar o banco de dados.")
+        st.code(response.text)  # Ajuda a debugar se der erro
         st.stop()
 
 # ===== Função: Verificar login =====
