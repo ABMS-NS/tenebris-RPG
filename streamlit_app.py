@@ -360,7 +360,7 @@ def pagina_login():
 
 # ===== FUNÇÃO: PÁGINA PRINCIPAL =====
 def home():
-    st.title("🌒 Bem-vindo ao Tenebris RPG")
+    st.title("")
 # ===== FUNÇÃO: PÁGINA PRINCIPAL =====
 def pagina_principal():
     """
@@ -371,7 +371,7 @@ def pagina_principal():
     """
     
     # Menu lateral estilo lista
-    pagina = st.sidebar.radio("Navegação", ["🏠 Início", "🎲 Mesas", "⚙️ Configurações"])
+    pagina = st.sidebar.radio("Navegação", ["🌒 Bem-vindo ao Tenebris RPG", "🎲 Mesas", "⚙️ Configurações"])
 
     # Conteúdo da página
     st.title(pagina)
