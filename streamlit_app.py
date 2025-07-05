@@ -1,123 +1,55 @@
-"""
-===========================================
-SISTEMA DE LOGIN TENEBRIS RPG
-===========================================
+import streamlit as st
+import requests
+import base64
+import json
+import hashlib
 
-Este sistema implementa um portal de login/cadastro para o RPG Tenebris,
-utilizando GitHub como banco de dados e Streamlit como interface web.
+# ===== CONFIGURAÇÕES DO GITHUB =====
 
-Funcionalidades:
-- Login de usuários existentes
-- Cadastro de novos usuários com ID automático
-- Autenticação com validação
-- Persistência de dados no GitHub
-- Interface web responsiva
+# Configurações para usar o GitHub como banco de dados
+REPO = "ABMS-NS/tenebris-RPG"  # ALTERE AQUI: seu_usuario/seu_repositorio
+ARQUIVO_JSON = "usuarios.json"        # Nome do arquivo que armazena os usuários
+BRANCH = "main"                       # Branch do repositório
+TOKEN = st.secrets["GITHUB_TOKEN"]    # Token do GitHub nos secrets do Streamlit
 
-Autor: Sistema Tenebris RPG
-Data: 2025
-"""
+# ===== CONFIGURAÇÕES DA PÁGINA =====
 
-# ===== IMPORTAÇÕES =====
-import streamlit as st      # Framework web para criar interfaces interativas
-import requests            # Biblioteca para fazer requisições HTTP ao GitHub API
-import base64             # Biblioteca para codificar/decodificar arquivos em base64
-import json               # Biblioteca para manipular dados JSON
+st.set_page_config(
+    page_title="Sistema de Login",
+    page_icon="🔐",
+    layout="centered"
+)
 
-# ===== CONFIGURAÇÕES GLOBAIS =====
+# ===== FUNÇÕES DE UTILIDADE =====
 
-# Configurações essenciais para conexão com o repositório GitHub
-# que serve como banco de dados do sistema.
+def criptografar_senha(senha):
+    """
+    Criptografa a senha usando SHA-256 para segurança básica.
+    
+    Args:
+        senha (str): Senha em texto plano
+        
+    Returns:
+        str: Senha criptografada em hexadecimal
+    """
+    return hashlib.sha256(senha.encode()).hexdigest()
 
-REPO = "ABMS-NS/tenebris-RPG"        # Nome do repositório GitHub no formato usuário/repositório
-ARQUIVO_JSON = "usuarios.json"        # Nome do arquivo JSON que armazena os dados dos usuários
-BRANCH = "main"                       # Branch principal do repositório onde estão os arquivos
-TOKEN = st.secrets["GITHUB_TOKEN"]    # Token de acesso ao GitHub armazenado nos secrets do Streamlit
+# ===== FUNÇÕES PARA GITHUB =====
 
-# ===== FUNÇÃO: CARREGAR LISTA DE USUÁRIOS =====
 def carregar_usuarios():
     """
     Carrega a lista de usuários do arquivo JSON hospedado no GitHub.
     
     Processo:
-    1. Monta a URL da API do GitHub para acessar o arquivo
-    2. Configura os headers de autenticação
-    3. Faz a requisição HTTP GET
-    4. Decodifica o conteúdo base64 retornado
-    5. Converte de JSON para objeto Python
+    1. Faz requisição GET para a API do GitHub
+    2. Decodifica o conteúdo base64 retornado
+    3. Converte de JSON para lista Python
     
     Returns:
-        list: Lista de dicionários contendo os dados dos usuários
-        
-    Raises:
-        SystemExit: Para a execução se não conseguir carregar o arquivo
+        list: Lista de usuários cadastrados
     """
-    # Monta a URL da API do GitHub para acessar o arquivo específico
+    # URL da API do GitHub para acessar o arquivo
     url = f"https://api.github.com/repos/{REPO}/contents/{ARQUIVO_JSON}?ref={BRANCH}"
-    
-    # Configura os headers necessários para autenticação na API do GitHub
-    headers = {
-        "Authorization": f"token {TOKEN}",      # Token de autenticação
-        "Accept": "application/vnd.github.v3+json"  # Especifica a versão da API
-    }
-
-    # Faz a requisição HTTP GET para obter o arquivo
-    response = requests.get(url, headers=headers)
-
-    # Verifica se a requisição foi bem-sucedida (código 200)
-    if response.status_code == 200:
-        # Extrai o conteúdo em base64 da resposta JSON
-        conteudo_base64 = response.json()["content"]
-        # Decodifica o base64 para string
-        conteudo = base64.b64decode(conteudo_base64).decode()
-        # Converte a string JSON para objeto Python
-        return json.loads(conteudo)
-    else:
-        # Exibe erro e para a execução se não conseguir carregar
-        st.error("❌ Não foi possível carregar o banco de dados.")
-        st.stop()
-
-# ===== FUNÇÃO: VERIFICAR LOGIN =====
-def verificar_login(usuario, senha, usuarios):
-    """
-    Verifica se as credenciais de login são válidas.
-    
-    Percorre a lista de usuários e compara o nome de usuário e senha
-    fornecidos com os dados armazenados.
-    
-    Args:
-        usuario (str): Nome de usuário fornecido
-        senha (str): Senha fornecida
-        usuarios (list): Lista de usuários carregada do GitHub
-        
-    Returns:
-        bool: True se as credenciais forem válidas, False caso contrário
-    """
-    # Percorre todos os usuários na lista
-    for u in usuarios:
-        # Verifica se o usuário e senha coincidem
-        if u["usuario"] == usuario and u["senha"] == senha:
-            return True  # Login válido
-    return False  # Login inválido
-
-# ===== FUNÇÃO: SALVAR USUÁRIOS NO GITHUB =====
-def salvar_usuarios(usuarios):
-    """
-    Salva a lista atualizada de usuários no arquivo JSON do GitHub.
-    
-    Processo:
-    1. Obtém o SHA atual do arquivo (necessário para atualização)
-    2. Converte a lista de usuários para JSON
-    3. Codifica em base64
-    4. Faz commit da atualização no GitHub
-    
-    Args:
-        usuarios (list): Lista atualizada de usuários
-        
-    Returns:
-        bool: True se salvou com sucesso, False caso contrário
-    """
-    # URL da API para acessar/modificar o arquivo
-    url = f"https://api.github.com/repos/{REPO}/contents/{ARQUIVO_JSON}"
     
     # Headers de autenticação
     headers = {
@@ -125,73 +57,117 @@ def salvar_usuarios(usuarios):
         "Accept": "application/vnd.github.v3+json"
     }
     
-    # Primeiro, precisa obter o SHA atual do arquivo
-    # (GitHub exige o SHA para fazer atualizações)
-    response = requests.get(url, headers=headers)
-    if response.status_code == 200:
-        sha_atual = response.json()["sha"]  # Extrai o SHA atual
-    else:
-        st.error("❌ Erro ao acessar o arquivo no GitHub.")
-        return False
-    
-    # Debug: Mostra os dados que serão salvos
-    print(f"Debug: Dados que serão salvos: {usuarios}")
-    
-    # Converte a lista de usuários para string JSON formatada
-    # ensure_ascii=False permite caracteres especiais
-    # indent=2 formata o JSON de forma legível
-    conteudo_json = json.dumps(usuarios, indent=2, ensure_ascii=False)
-    
-    # Debug: Mostra o JSON que será enviado
-    print(f"Debug: JSON gerado: {conteudo_json}")
-    
-    # Codifica em base64 (formato exigido pela API do GitHub)
-    conteudo_base64 = base64.b64encode(conteudo_json.encode('utf-8')).decode('utf-8')
-    
-    # Prepara os dados para o commit
-    dados = {
-        "message": "Novo usuário cadastrado",  # Mensagem do commit
-        "content": conteudo_base64,           # Conteúdo em base64
-        "sha": sha_atual,                     # SHA atual do arquivo
-        "branch": BRANCH                      # Branch onde fazer o commit
-    }
-    
-    # Faz o commit (PUT request)
-    response = requests.put(url, headers=headers, json=dados)
-    
-    # Debug: Mostra o resultado da operação
-    print(f"Debug: Status da resposta: {response.status_code}")
-    if response.status_code != 200:
-        print(f"Debug: Erro na resposta: {response.text}")
-    
-    return response.status_code == 200  # Retorna True se sucesso (código 200)
+    try:
+        # Faz a requisição
+        response = requests.get(url, headers=headers)
+        
+        if response.status_code == 200:
+            # Decodifica o conteúdo base64
+            conteudo_base64 = response.json()["content"]
+            conteudo = base64.b64decode(conteudo_base64).decode('utf-8')
+            return json.loads(conteudo)
+        elif response.status_code == 404:
+            # Arquivo não existe ainda, retorna lista vazia
+            return []
+        else:
+            st.error(f"❌ Erro ao carregar usuários: {response.status_code}")
+            return []
+            
+    except Exception as e:
+        st.error(f"❌ Erro ao conectar com GitHub: {e}")
+        return []
 
-# ===== FUNÇÃO: VERIFICAR SE USUÁRIO JÁ EXISTE =====
-def usuario_existe(usuario, usuarios):
+def salvar_usuarios(usuarios):
     """
-    Verifica se um nome de usuário já está em uso.
+    Salva a lista de usuários no arquivo JSON do GitHub.
+    
+    Processo:
+    1. Obtém o SHA atual do arquivo (se existir)
+    2. Converte a lista para JSON
+    3. Codifica em base64
+    4. Faz commit no GitHub
     
     Args:
-        usuario (str): Nome de usuário a ser verificado
-        usuarios (list): Lista de usuários existentes
+        usuarios (list): Lista de usuários para salvar
         
     Returns:
-        bool: True se o usuário já existe, False caso contrário
+        bool: True se salvou com sucesso, False caso contrário
     """
-    # Percorre a lista de usuários
-    for u in usuarios:
-        # Verifica se o nome de usuário já existe
-        if u["usuario"] == usuario:
-            return True  # Usuário já existe
-    return False  # Usuário não existe
+    url = f"https://api.github.com/repos/{REPO}/contents/{ARQUIVO_JSON}"
+    
+    headers = {
+        "Authorization": f"token {TOKEN}",
+        "Accept": "application/vnd.github.v3+json"
+    }
+    
+    try:
+        # Verifica se o arquivo já existe para obter o SHA
+        response = requests.get(url, headers=headers)
+        sha_atual = None
+        
+        if response.status_code == 200:
+            sha_atual = response.json()["sha"]
+        
+        # Converte para JSON e codifica em base64
+        conteudo_json = json.dumps(usuarios, indent=2, ensure_ascii=False)
+        conteudo_base64 = base64.b64encode(conteudo_json.encode('utf-8')).decode('utf-8')
+        
+        # Prepara os dados para o commit
+        dados = {
+            "message": "Atualização de usuários - Sistema de Login",
+            "content": conteudo_base64,
+            "branch": BRANCH
+        }
+        
+        # Adiciona SHA se o arquivo já existir
+        if sha_atual:
+            dados["sha"] = sha_atual
+        
+        # Faz o commit
+        response = requests.put(url, headers=headers, json=dados)
+        
+        return response.status_code in [200, 201]  # 200 = updated, 201 = created
+        
+    except Exception as e:
+        st.error(f"❌ Erro ao salvar no GitHub: {e}")
+        return False
 
-# ===== FUNÇÃO: OBTER PRÓXIMO ID =====
+def verificar_login(usuario, senha):
+    """
+    Verifica se as credenciais de login são válidas.
+    
+    Args:
+        usuario (str): Nome de usuário
+        senha (str): Senha em texto plano
+        
+    Returns:
+        bool: True se login válido, False caso contrário
+    """
+    usuarios = carregar_usuarios()
+    senha_criptografada = criptografar_senha(senha)
+    
+    # Procura o usuário na lista
+    for u in usuarios:
+        if u["usuario"] == usuario and u["senha"] == senha_criptografada:
+            return True
+    return False
+
+def usuario_existe(usuario):
+    """
+    Verifica se um usuário já existe no sistema.
+    
+    Args:
+        usuario (str): Nome de usuário para verificar
+        
+    Returns:
+        bool: True se usuário existe, False caso contrário
+    """
+    usuarios = carregar_usuarios()
+    return any(u["usuario"] == usuario for u in usuarios)
+
 def obter_proximo_id(usuarios):
     """
     Calcula o próximo ID disponível para um novo usuário.
-    
-    Percorre todos os usuários existentes e encontra o maior ID,
-    então retorna o próximo número sequencial.
     
     Args:
         usuarios (list): Lista de usuários existentes
@@ -199,561 +175,238 @@ def obter_proximo_id(usuarios):
     Returns:
         int: Próximo ID disponível
     """
-    if not usuarios:  # Se não há usuários, começa com ID 1
+    if not usuarios:
         return 1
     
-    # Lista para armazenar todos os IDs encontrados
-    ids_existentes = []
+    # Busca o maior ID existente
+    ids_existentes = [u.get("id", 0) for u in usuarios if isinstance(u.get("id"), int)]
     
-    # Percorre todos os usuários e coleta os IDs
-    for u in usuarios:
-        # Verifica se o usuário tem campo 'id'
-        if 'id' in u and isinstance(u['id'], int):
-            ids_existentes.append(u['id'])
-    
-    # Se não há IDs existentes, começa com 1
     if not ids_existentes:
         return 1
     
-    # Retorna o maior ID + 1
     return max(ids_existentes) + 1
 
-# ===== FUNÇÃO: CADASTRAR NOVO USUÁRIO =====
-def cadastrar_usuario(usuario, senha, usuarios):
+def cadastrar_usuario(usuario, senha):
     """
-    Cadastra um novo usuário no sistema.
-    
-    Processo:
-    1. Verifica se o usuário já existe
-    2. Gera um novo ID automático
-    3. Cria o objeto do novo usuário
-    4. Adiciona à lista de usuários
-    5. Salva no GitHub
+    Cadastra um novo usuário no sistema GitHub.
     
     Args:
         usuario (str): Nome de usuário
-        senha (str): Senha do usuário
-        usuarios (list): Lista atual de usuários
+        senha (str): Senha em texto plano
         
     Returns:
         tuple: (sucesso, mensagem)
-            sucesso (bool): True se cadastrou com sucesso
-            mensagem (str): Mensagem de feedback
     """
-    # Verifica se o usuário já existe
-    if usuario_existe(usuario, usuarios):
-        return False, "Usuário já existe."
+    # Validações básicas
+    if len(usuario) < 3:
+        return False, "Usuário deve ter pelo menos 3 caracteres!"
     
-    # Gera o próximo ID disponível
+    if len(senha) < 4:
+        return False, "Senha deve ter pelo menos 4 caracteres!"
+    
+    # Verifica se usuário já existe
+    if usuario_existe(usuario):
+        return False, "Usuário já existe!"
+    
+    # Carrega usuários existentes
+    usuarios = carregar_usuarios()
+    
+    # Cria novo usuário
     novo_id = obter_proximo_id(usuarios)
+    import datetime
     
-    # Cria o objeto do novo usuário com ID, usuário e senha
     novo_usuario = {
         "id": novo_id,
         "usuario": usuario,
-        "senha": senha
+        "senha": criptografar_senha(senha),
+        "data_cadastro": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     }
     
-    # Debug: Mostra o novo usuário que será adicionado
-    print(f"Debug: Novo usuário criado: {novo_usuario}")
-    
-    # Adiciona o novo usuário à lista
+    # Adiciona à lista
     usuarios.append(novo_usuario)
     
-    # Debug: Mostra a lista completa antes de salvar
-    print(f"Debug: Lista de usuários antes de salvar: {usuarios}")
-    
-    # Tenta salvar no GitHub
+    # Salva no GitHub
     if salvar_usuarios(usuarios):
         return True, f"Usuário cadastrado com sucesso! ID: {novo_id}"
     else:
-        return False, "Erro ao salvar usuário."
+        return False, "Erro ao salvar usuário no GitHub!"
 
-# ===== FUNÇÃO: PÁGINA DE LOGIN =====
-def pagina_login():
+# ===== INTERFACE DE LOGIN =====
+
+def tela_login():
     """
-    Renderiza a página de login/cadastro.
-    
-    Cria uma interface com duas abas:
-    1. Aba de Login - para usuários existentes
-    2. Aba de Cadastro - para novos usuários
-    
-    Inclui validações de campos e feedback visual.
+    Renderiza a tela de login com abas para Login e Cadastro.
     """
-    # Título principal da página
-    st.title("🌒 Login - Tenebris RPG")
+    # Título principal
+    st.title("🔐 Sistema de Login")
+    st.markdown("*Dados armazenados no GitHub*")
+    st.markdown("---")
     
-    # Cria duas abas: Login e Cadastro
-    tab1, tab2 = st.tabs(["🔑 Login", "👤 Cadastro"])
+    # Cria abas para Login e Cadastro
+    tab_login, tab_cadastro = st.tabs(["🔑 Fazer Login", "👤 Criar Conta"])
     
     # === ABA DE LOGIN ===
-    with tab1:
-        st.subheader("Fazer Login")
+    with tab_login:
+        st.subheader("Entre com suas credenciais")
         
-        # Campos de entrada para login
-        usuario_login = st.text_input("Usuário", key="login_usuario")
-        senha_login = st.text_input("Senha", type="password", key="login_senha")
-
-        # Botão de login
-        if st.button("Entrar", key="btn_login"):
-            # Verifica se os campos estão preenchidos
-            if usuario_login and senha_login:
-                # Carrega a lista de usuários do GitHub
-                usuarios = carregar_usuarios()
-                
-                # Verifica as credenciais
-                if verificar_login(usuario_login, senha_login, usuarios):
-                    # Login bem-sucedido - atualiza o estado da sessão
-                    st.session_state["logado"] = True
-                    st.session_state["usuario"] = usuario_login
-                    # Recarrega a página para mostrar a área logada
-                    st.rerun()
+        # Formulário de login
+        with st.form("form_login"):
+            usuario = st.text_input("👤 Usuário", placeholder="Digite seu usuário")
+            senha = st.text_input("🔒 Senha", type="password", placeholder="Digite sua senha")
+            
+            # Botão de login
+            btn_login = st.form_submit_button("🚀 Entrar", type="primary", use_container_width=True)
+            
+            # Processa o login
+            if btn_login:
+                if not usuario or not senha:
+                    st.error("⚠️ Por favor, preencha todos os campos!")
                 else:
-                    # Credenciais inválidas
-                    st.error("Usuário ou senha inválidos.")
-            else:
-                # Campos em branco
-                st.warning("Por favor, preencha todos os campos.")
+                    # Mostra loading enquanto verifica
+                    with st.spinner("🔍 Verificando credenciais..."):
+                        if verificar_login(usuario, senha):
+                            # Login bem-sucedido
+                            st.session_state["logado"] = True
+                            st.session_state["usuario"] = usuario
+                            st.success("✅ Login realizado com sucesso!")
+                            st.rerun()
+                        else:
+                            st.error("❌ Usuário ou senha incorretos!")
     
     # === ABA DE CADASTRO ===
-    with tab2:
-        st.subheader("Cadastrar Novo Usuário")
+    with tab_cadastro:
+        st.subheader("Criar nova conta")
         
-        # Campos de entrada para cadastro
-        usuario_cadastro = st.text_input("Novo Usuário", key="cadastro_usuario")
-        senha_cadastro = st.text_input("Nova Senha", type="password", key="cadastro_senha")
-        confirmar_senha = st.text_input("Confirmar Senha", type="password", key="confirmar_senha")
-
-        # Botão de cadastro
-        if st.button("Cadastrar", key="btn_cadastro"):
-            # Verifica se todos os campos estão preenchidos
-            if usuario_cadastro and senha_cadastro and confirmar_senha:
-                # Verifica se as senhas coincidem
-                if senha_cadastro == confirmar_senha:
-                    # Verifica critérios mínimos de segurança
-                    if len(usuario_cadastro) >= 3 and len(senha_cadastro) >= 4:
-                        # Carrega lista atual de usuários
-                        usuarios = carregar_usuarios()
-                        
-                        # Tenta cadastrar o novo usuário
-                        sucesso, mensagem = cadastrar_usuario(usuario_cadastro, senha_cadastro, usuarios)
+        # Formulário de cadastro
+        with st.form("form_cadastro"):
+            novo_usuario = st.text_input("👤 Usuário", placeholder="Escolha um nome de usuário")
+            nova_senha = st.text_input("🔒 Senha", type="password", placeholder="Crie uma senha")
+            confirmar_senha = st.text_input("🔒 Confirmar Senha", type="password", placeholder="Confirme sua senha")
+            
+            # Botão de cadastro
+            btn_cadastro = st.form_submit_button("📝 Criar Conta", type="secondary", use_container_width=True)
+            
+            # Processa o cadastro
+            if btn_cadastro:
+                if not novo_usuario or not nova_senha or not confirmar_senha:
+                    st.error("⚠️ Por favor, preencha todos os campos!")
+                elif nova_senha != confirmar_senha:
+                    st.error("❌ As senhas não coincidem!")
+                else:
+                    # Mostra loading enquanto cadastra
+                    with st.spinner("📝 Criando conta no GitHub..."):
+                        sucesso, mensagem = cadastrar_usuario(novo_usuario, nova_senha)
                         
                         if sucesso:
-                            # Cadastro bem-sucedido
-                            st.success(mensagem)
-                            st.info("Agora você pode fazer login com suas credenciais.")
+                            st.success(f"✅ {mensagem}")
+                            st.info("🎉 Agora você pode fazer login!")
                         else:
-                            # Erro no cadastro
-                            st.error(mensagem)
-                    else:
-                        # Critérios mínimos não atendidos
-                        st.error("Usuário deve ter pelo menos 3 caracteres e senha pelo menos 4 caracteres.")
-                else:
-                    # Senhas não coincidem
-                    st.error("As senhas não coincidem.")
-            else:
-                # Campos em branco
-                st.warning("Por favor, preencha todos os campos.")
+                            st.error(f"❌ {mensagem}")
 
-
-# ===== FUNÇÃO: CARREGAR LISTA DE MESAS =====
-def carregar_mesas():
+def area_logada():
     """
-    Carrega a lista de todas as mesas disponíveis na pasta 'mesas' do GitHub.
-    
-    Returns:
-        list: Lista de dicionários contendo os dados das mesas
+    Área que aparece após o login bem-sucedido.
+    Aqui você pode colocar o conteúdo do seu site.
     """
-    # URL da API para acessar a pasta mesas
-    url = f"https://api.github.com/repos/{REPO}/contents/mesas?ref={BRANCH}"
+    # Cabeçalho com boas-vindas
+    st.title(f"🎉 Bem-vindo, {st.session_state['usuario']}!")
+    st.markdown("---")
     
-    headers = {
-        "Authorization": f"token {TOKEN}",
-        "Accept": "application/vnd.github.v3+json"
-    }
-    
-    response = requests.get(url, headers=headers)
-    
-    if response.status_code == 200:
-        arquivos = response.json()
-        mesas = []
-        
-        # Filtra apenas arquivos JSON
-        for arquivo in arquivos:
-            if arquivo["name"].endswith(".json"):
-                # Carrega o conteúdo de cada mesa
-                mesa_data = carregar_mesa_individual(arquivo["name"])
-                if mesa_data:
-                    mesas.append(mesa_data)
-        
-        return mesas
-    else:
-        st.error("❌ Não foi possível carregar a lista de mesas.")
-        return []
-
-# ===== FUNÇÃO: CARREGAR MESA INDIVIDUAL =====
-def carregar_mesa_individual(nome_arquivo):
-    """
-    Carrega os dados de uma mesa específica.
-    
-    Args:
-        nome_arquivo (str): Nome do arquivo JSON da mesa
-        
-    Returns:
-        dict: Dados da mesa ou None se erro
-    """
-    url = f"https://api.github.com/repos/{REPO}/contents/mesas/{nome_arquivo}?ref={BRANCH}"
-    
-    headers = {
-        "Authorization": f"token {TOKEN}",
-        "Accept": "application/vnd.github.v3+json"
-    }
-    
-    response = requests.get(url, headers=headers)
-    
-    if response.status_code == 200:
-        conteudo_base64 = response.json()["content"]
-        conteudo = base64.b64decode(conteudo_base64).decode()
-        mesa_data = json.loads(conteudo)
-        mesa_data["arquivo"] = nome_arquivo  # Adiciona o nome do arquivo para referência
-        return mesa_data
-    else:
-        return None
-
-# ===== FUNÇÃO: CRIAR NOVA MESA =====
-def criar_mesa(nome_mesa, descricao, mestre):
-    """
-    Cria uma nova mesa de RPG.
-    
-    Args:
-        nome_mesa (str): Nome da mesa
-        descricao (str): Descrição da mesa
-        mestre (str): Nome do mestre da mesa
-        
-    Returns:
-        tuple: (sucesso, mensagem)
-    """
-    # Gera um ID único para a mesa baseado no timestamp
-    import time
-    id_mesa = int(time.time())
-    
-    # Nome do arquivo será baseado no ID da mesa
-    nome_arquivo = f"mesa_{id_mesa}.json"
-    
-    # Estrutura da nova mesa
-    nova_mesa = {
-        "id": id_mesa,
-        "nome": nome_mesa,
-        "descricao": descricao,
-        "mestre": mestre,
-        "jogadores": [],
-        "max_jogadores": 6,
-        "data_criacao": time.strftime("%Y-%m-%d %H:%M:%S"),
-        "status": "ativa",
-        "configuracoes": {
-            "sistema": "Tenebris RPG",
-            "nivel_inicial": 1,
-            "modo_jogo": "campanha"
-        }
-    }
-    
-    # Salva a nova mesa no GitHub
-    if salvar_mesa(nome_arquivo, nova_mesa):
-        return True, f"Mesa '{nome_mesa}' criada com sucesso! ID: {id_mesa}"
-    else:
-        return False, "Erro ao criar a mesa."
-
-# ===== FUNÇÃO: SALVAR MESA NO GITHUB =====
-def salvar_mesa(nome_arquivo, dados_mesa):
-    """
-    Salva uma mesa no diretório mesas do GitHub.
-    
-    Args:
-        nome_arquivo (str): Nome do arquivo JSON
-        dados_mesa (dict): Dados da mesa
-        
-    Returns:
-        bool: True se salvou com sucesso, False caso contrário
-    """
-    url = f"https://api.github.com/repos/{REPO}/contents/mesas/{nome_arquivo}"
-    
-    headers = {
-        "Authorization": f"token {TOKEN}",
-        "Accept": "application/vnd.github.v3+json"
-    }
-    
-    # Converte os dados para JSON
-    conteudo_json = json.dumps(dados_mesa, indent=2, ensure_ascii=False)
-    conteudo_base64 = base64.b64encode(conteudo_json.encode('utf-8')).decode('utf-8')
-    
-    # Dados para criar o arquivo
-    dados = {
-        "message": f"Nova mesa criada: {dados_mesa['nome']}",
-        "content": conteudo_base64,
-        "branch": BRANCH
-    }
-    
-    response = requests.put(url, headers=headers, json=dados)
-    return response.status_code == 201  # 201 = Created
-
-# ===== FUNÇÃO: ENTRAR NA MESA =====
-def entrar_mesa(mesa_data):
-    """
-    Permite ao usuário entrar em uma mesa específica.
-    
-    Args:
-        mesa_data (dict): Dados da mesa
-    """
-    # Armazena a mesa atual no estado da sessão
-    st.session_state["mesa_atual"] = mesa_data
-    st.session_state["na_mesa"] = True
-    st.rerun()
-
-# ===== FUNÇÃO: INTERFACE DA MESA =====
-def interface_mesa():
-    """
-    Renderiza a interface de uma mesa específica.
-    """
-    if "mesa_atual" not in st.session_state:
-        st.error("Erro: Mesa não encontrada.")
-        return
-    
-    mesa = st.session_state["mesa_atual"]
-    
-    # Cabeçalho da mesa
-    st.title(f"🎲 {mesa['nome']}")
-    st.markdown(f"**Mestre:** {mesa['mestre']}")
-    st.markdown(f"**Descrição:** {mesa['descricao']}")
-    
-    # Informações da mesa
-    col1, col2, col3 = st.columns(3)
-    
-    with col1:
-        st.metric("Jogadores", f"{len(mesa['jogadores'])}/{mesa['max_jogadores']}")
-    
-    with col2:
-        st.metric("Status", mesa['status'].title())
-    
-    with col3:
-        st.metric("Sistema", mesa['configuracoes']['sistema'])
-    
-    # Lista de jogadores
-    st.subheader("👥 Jogadores")
-    if mesa['jogadores']:
-        for jogador in mesa['jogadores']:
-            st.markdown(f"• {jogador}")
-    else:
-        st.info("Nenhum jogador na mesa ainda.")
-    
-    # Botões de ação
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        if st.button("🚪 Voltar às Mesas"):
-            st.session_state["na_mesa"] = False
-            st.session_state["mesa_atual"] = None
-            st.rerun()
-    
-    with col2:
-        # Aqui você pode adicionar mais funcionalidades da mesa
-        st.button("⚙️ Configurações da Mesa", disabled=True)
-    
-    # Área de chat/interação (placeholder)
-    st.subheader("💬 Chat da Mesa")
-    st.info("Sistema de chat em desenvolvimento...")
-
-# ===== FUNÇÃO: PÁGINA DE MESAS =====
-def mesas():
-    """
-    Renderiza a página de mesas com lista de mesas e opção de criar nova mesa.
-    """
-    st.title("🎲 Mesas de RPG")
-    
-    # Verifica se está dentro de uma mesa
-    if st.session_state.get("na_mesa", False):
-        interface_mesa()
-        return
-    
-    # Botão para criar nova mesa
+    # Informações do usuário
     col1, col2 = st.columns([3, 1])
     
+    with col1:
+        st.success("✅ Você está logado no sistema!")
+        st.info("🚀 Dados sincronizados com GitHub")
+    
     with col2:
-        if st.button("➕ Criar Mesa", type="primary"):
-            st.session_state["criando_mesa"] = True
+        # Botão de logout
+        if st.button("🚪 Sair", type="secondary", use_container_width=True):
+            # Limpa o estado da sessão
+            st.session_state["logado"] = False
+            st.session_state["usuario"] = None
+            st.success("👋 Logout realizado com sucesso!")
+            st.rerun()
     
-    # Modal para criar mesa
-    if st.session_state.get("criando_mesa", False):
-        st.subheader("📝 Criar Nova Mesa")
+    # Exemplo de conteúdo após login
+    st.markdown("---")
+    st.subheader("📋 Área Restrita")
+    
+    # Aqui você pode adicionar o conteúdo específico do seu site
+    st.write("🎯 **Substitua esta seção pelo conteúdo do seu site!**")
+    
+    # Exemplo: Mostrar informações dos usuários (só para demonstração)
+    if st.checkbox("🔍 Mostrar informações de debug"):
+        with st.expander("📊 Informações da Sessão"):
+            st.json({
+                "Usuario": st.session_state["usuario"],
+                "Status": "Logado",
+                "Repositorio": REPO,
+                "Arquivo": ARQUIVO_JSON
+            })
         
-        with st.form("form_criar_mesa"):
-            nome_mesa = st.text_input("Nome da Mesa", placeholder="Ex: Aventura na Floresta Sombria")
-            descricao = st.text_area("Descrição", placeholder="Descreva a aventura, cenário, etc.")
-            
-            # Colunas para os botões
-            col1, col2 = st.columns(2)
-            
-            with col1:
-                criar = st.form_submit_button("🎲 Criar Mesa", type="primary")
-            
-            with col2:
-                cancelar = st.form_submit_button("❌ Cancelar")
-            
-            if criar:
-                if nome_mesa and descricao:
-                    mestre = st.session_state["usuario"]
-                    sucesso, mensagem = criar_mesa(nome_mesa, descricao, mestre)
-                    
-                    if sucesso:
-                        st.success(mensagem)
-                        st.session_state["criando_mesa"] = False
-                        st.rerun()
-                    else:
-                        st.error(mensagem)
-                else:
-                    st.error("Por favor, preencha todos os campos.")
-            
-            if cancelar:
-                st.session_state["criando_mesa"] = False
-                st.rerun()
-    
-    # Lista de mesas
-    st.subheader("📋 Mesas Disponíveis")
-    
-    # Carrega as mesas
-    mesas_list = carregar_mesas()
-    
-    if not mesas_list:
-        st.info("Nenhuma mesa encontrada. Seja o primeiro a criar uma mesa!")
-    else:
-        # Exibe cada mesa
-        for mesa in mesas_list:
-            with st.container():
-                st.markdown("---")
+        # Botão para visualizar usuários cadastrados (só para debug)
+        if st.button("👥 Ver usuários cadastrados"):
+            with st.spinner("📥 Carregando do GitHub..."):
+                usuarios = carregar_usuarios()
+                st.write(f"**Total de usuários:** {len(usuarios)}")
                 
-                # Layout da mesa
-                col1, col2 = st.columns([4, 1])
-                
-                with col1:
-                    st.markdown(f"### 🎲 {mesa.get('nome', 'Mesa sem nome')}")
-                    st.markdown(f"**Mestre:** {mesa.get('mestre', 'Sem mestre')}")
-                    st.markdown(f"**Descrição:** {mesa.get('descricao', 'Sem descrição')}")
-                    
-                    # Informações extras
-                    info_col1, info_col2, info_col3 = st.columns(3)
-                    
-                    with info_col1:
-                        st.caption(f"👥 {len(mesa.get('jogadores', []))}/{mesa.get('max_jogadores', 6)} jogadores")
-                    
-                    with info_col2:
-                        st.caption(f"📅 {mesa['data_criacao']}")
-                    
-                    with info_col3:
-                        status_color = "🟢" if mesa['status'] == "ativa" else "🔴"
-                        st.caption(f"{status_color} {mesa['status'].title()}")
-                
-                with col2:
-                    # Botão para entrar na mesa
-                    if st.button("🚪 Entrar", key=f"entrar_{mesa['id']}"):
-                        entrar_mesa(mesa)
-                    
-                    # Botão de informações (opcional)
-                    if st.button("ℹ️ Info", key=f"info_{mesa['id']}"):
-                        st.session_state[f"show_info_{mesa['id']}"] = True
-                
-                # Modal de informações detalhadas (opcional)
-                if st.session_state.get(f"show_info_{mesa['id']}", False):
-                    with st.expander("ℹ️ Informações Detalhadas", expanded=True):
-                        st.json(mesa)
-                        if st.button("Fechar", key=f"close_{mesa['id']}"):
-                            st.session_state[f"show_info_{mesa['id']}"] = False
-                            st.rerun()
-
-# ===== INICIALIZAÇÃO DE ESTADOS PARA MESAS =====
-# Adicione essas linhas no final do seu arquivo, junto com as outras inicializações de estado
-
-# Estado para controlar se está criando uma mesa
-if "criando_mesa" not in st.session_state:
-    st.session_state["criando_mesa"] = False
-
-# Estado para controlar se está dentro de uma mesa
-if "na_mesa" not in st.session_state:
-    st.session_state["na_mesa"] = False
-
-# Estado para armazenar a mesa atual
-if "mesa_atual" not in st.session_state:
-    st.session_state["mesa_atual"] = None
-
-
-# ===== FUNÇÃO: PÁGINA PRINCIPAL =====
-def home():
-    st.title("EM DESENVOLVIMENTO")
-
-
-
-
-# ===== FUNÇÃO: SIDEBAR =====
-def pagina_principal():
-    """
-    Renderiza a página principal após o login.
-    
-    Mostra uma mensagem de boas-vindas personalizada e
-    oferece a opção de logout.
-    """
-    
-    # Menu lateral estilo lista
-    pagina = st.sidebar.radio("Navegação", ["🌒 Home", "🎲 Mesas", "⚙️ Configurações"])
-
-    # Conteúdo da página
-    st.title(pagina)
-
-    if "Início" in pagina:
-        home()
-
-    elif "Mesas" in pagina:
-        mesas()
-
-    elif "Configurações" in pagina:
-        st.write("Altere as configurações do sistema.")
-    
-    
-    
-    # Botão de logout
-    if st.button("Sair"):
-        # Limpa o estado da sessão
-        st.session_state["logado"] = False
-        st.session_state["usuario"] = None
-        # Recarrega a página para mostrar a tela de login
-        st.rerun()
-
-# ===== CONFIGURAÇÃO INICIAL DA INTERFACE =====
-
-# Configurações iniciais da página web antes de renderizar o conteúdo.
-
-st.set_page_config(
-    page_title="Login Tenebris",    # Título da aba do navegador
-    page_icon="🌒"                  # Ícone da aba do navegador
-)
+                # Mostra usuários sem mostrar senhas
+                for u in usuarios:
+                    st.write(f"• **ID:** {u.get('id', 'N/A')} | **Usuário:** {u.get('usuario', 'N/A')} | **Cadastro:** {u.get('data_cadastro', 'N/A')}")
 
 # ===== INICIALIZAÇÃO DO ESTADO DA SESSÃO =====
 
-# Inicializa as variáveis de estado da sessão se elas não existirem.
-# O Streamlit mantém essas variáveis entre as execuções da aplicação.
-
-# Verifica se o usuário está logado
+# Inicializa variáveis de estado se não existirem
 if "logado" not in st.session_state:
     st.session_state["logado"] = False
 
-# Armazena o nome do usuário logado
 if "usuario" not in st.session_state:
     st.session_state["usuario"] = None
 
-# ===== CONTROLE DE FLUXO PRINCIPAL =====
-#
-# Controla qual página será exibida baseado no estado de login.
-# 
-# Se o usuário não está logado, mostra a página de login
+# ===== CONTROLE PRINCIPAL DA APLICAÇÃO =====
+
+# Controla qual tela mostrar baseado no estado de login
 if not st.session_state["logado"]:
-    pagina_login()
+    # Usuário não está logado - mostra tela de login
+    tela_login()
 else:
-    # Se o usuário está logado, mostra a página principal
-    pagina_principal()
+    # Usuário está logado - mostra área restrita
+    area_logada()
+
+# ===== INSTRUÇÕES DE CONFIGURAÇÃO =====
+"""
+🔧 COMO CONFIGURAR ESTE SISTEMA:
+
+1. **Configurar o GitHub:**
+   - Crie um repositório no GitHub
+   - Altere a variável REPO para: "seu_usuario/seu_repositorio"
+   - Crie um Personal Access Token no GitHub com permissões de repo
+
+2. **Configurar o Streamlit:**
+   - Crie um arquivo .streamlit/secrets.toml na raiz do projeto
+   - Adicione: GITHUB_TOKEN = "seu_token_aqui"
+   - Ou configure nas configurações do Streamlit Cloud
+
+3. **Executar:**
+   - Execute: streamlit run arquivo.py
+   - O sistema criará automaticamente o arquivo usuarios.json no GitHub
+
+4. **Funcionalidades:**
+   - ✅ Login com GitHub como banco de dados
+   - ✅ Cadastro de novos usuários
+   - ✅ Senhas criptografadas (SHA-256)
+   - ✅ IDs automáticos
+   - ✅ Timestamps de cadastro
+   - ✅ Validações de campos
+   - ✅ Controle de sessão
+   - ✅ Interface amigável
+
+5. **Segurança:**
+   - Senhas são criptografadas antes de salvar
+   - Token do GitHub fica nos secrets
+   - Validações de entrada
+   - Controle de acesso por sessão
+
+Para usar em produção, substitua area_logada() pelo conteúdo do seu site!
+"""
