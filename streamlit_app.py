@@ -276,7 +276,7 @@ def tela_login():
     """
     # Título principal
     st.title("🔐 Sistema de Login")
-    st.markdown("*Dados armazenados no GitHub*")
+    st.markdown("*Feito por Alison*")
     st.markdown("---")
     
     # Cria abas para Login e Cadastro
