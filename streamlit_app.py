@@ -5,41 +5,41 @@ import json
 import hashlib
 
 # ===== INSTRUÇÕES DE CONFIGURAÇÃO =====
-"""
-🔧 COMO CONFIGURAR ESTE SISTEMA:
+#"""
+# 🔧 COMO CONFIGURAR ESTE SISTEMA:
 
-1. **Configurar o GitHub:**
-   - Crie um repositório no GitHub
-   - Altere a variável REPO para: "seu_usuario/seu_repositorio"
-   - Crie um Personal Access Token no GitHub com permissões de repo
+#1. **Configurar o GitHub:**
+#   - Crie um repositório no GitHub
+#   - Altere a variável REPO para: "seu_usuario/seu_repositorio"
+#   - Crie um Personal Access Token no GitHub com permissões de repo
 
-2. **Configurar o Streamlit:**
-   - Crie um arquivo .streamlit/secrets.toml na raiz do projeto
-   - Adicione: GITHUB_TOKEN = "seu_token_aqui"
-   - Ou configure nas configurações do Streamlit Cloud
+#2. **Configurar o Streamlit:**
+#   - Crie um arquivo .streamlit/secrets.toml na raiz do projeto
+#   - Adicione: GITHUB_TOKEN = "seu_token_aqui"
+#   - Ou configure nas configurações do Streamlit Cloud
 
-3. **Executar:**
-   - Execute: streamlit run arquivo.py
-   - O sistema criará automaticamente o arquivo usuarios.json no GitHub
+#3. **Executar:**
+#   - Execute: streamlit run arquivo.py
+#   - O sistema criará automaticamente o arquivo usuarios.json no GitHub
 
-4. **Funcionalidades:**
-   - ✅ Login com GitHub como banco de dados
-   - ✅ Cadastro de novos usuários
-   - ✅ Senhas criptografadas (SHA-256)
-   - ✅ IDs automáticos
-   - ✅ Timestamps de cadastro
-   - ✅ Validações de campos
-   - ✅ Controle de sessão
-   - ✅ Interface amigável
+#4. **Funcionalidades:**
+#   - ✅ Login com GitHub como banco de dados
+#   - ✅ Cadastro de novos usuários
+#   - ✅ Senhas criptografadas (SHA-256)
+#   - ✅ IDs automáticos
+#   - ✅ Timestamps de cadastro
+#   - ✅ Validações de campos
+#   - ✅ Controle de sessão
+#   - ✅ Interface amigável
 
-5. **Segurança:**
-   - Senhas são criptografadas antes de salvar
-   - Token do GitHub fica nos secrets
-   - Validações de entrada
-   - Controle de acesso por sessão
+#5. **Segurança:**
+#   - Senhas são criptografadas antes de salvar
+#   - Token do GitHub fica nos secrets
+#   - Validações de entrada
+#   - Controle de acesso por sessão
 
-Para usar em produção, substitua area_logada() pelo conteúdo do seu site!
-"""
+#Para usar em produção, substitua area_logada() pelo conteúdo do seu site!
+#"""
 
 # ===== CONFIGURAÇÕES DO GITHUB =====
 
