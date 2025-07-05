@@ -356,12 +356,342 @@ def pagina_login():
                 st.warning("Por favor, preencha todos os campos.")
 
 
+# ===== FUNÇÃO: CARREGAR LISTA DE MESAS =====
+def carregar_mesas():
+    """
+    Carrega a lista de todas as mesas disponíveis na pasta 'mesas' do GitHub.
+    
+    Returns:
+        list: Lista de dicionários contendo os dados das mesas
+    """
+    # URL da API para acessar a pasta mesas
+    url = f"https://api.github.com/repos/{REPO}/contents/mesas?ref={BRANCH}"
+    
+    headers = {
+        "Authorization": f"token {TOKEN}",
+        "Accept": "application/vnd.github.v3+json"
+    }
+    
+    response = requests.get(url, headers=headers)
+    
+    if response.status_code == 200:
+        arquivos = response.json()
+        mesas = []
+        
+        # Filtra apenas arquivos JSON
+        for arquivo in arquivos:
+            if arquivo["name"].endswith(".json"):
+                # Carrega o conteúdo de cada mesa
+                mesa_data = carregar_mesa_individual(arquivo["name"])
+                if mesa_data:
+                    mesas.append(mesa_data)
+        
+        return mesas
+    else:
+        st.error("❌ Não foi possível carregar a lista de mesas.")
+        return []
+
+# ===== FUNÇÃO: CARREGAR MESA INDIVIDUAL =====
+def carregar_mesa_individual(nome_arquivo):
+    """
+    Carrega os dados de uma mesa específica.
+    
+    Args:
+        nome_arquivo (str): Nome do arquivo JSON da mesa
+        
+    Returns:
+        dict: Dados da mesa ou None se erro
+    """
+    url = f"https://api.github.com/repos/{REPO}/contents/mesas/{nome_arquivo}?ref={BRANCH}"
+    
+    headers = {
+        "Authorization": f"token {TOKEN}",
+        "Accept": "application/vnd.github.v3+json"
+    }
+    
+    response = requests.get(url, headers=headers)
+    
+    if response.status_code == 200:
+        conteudo_base64 = response.json()["content"]
+        conteudo = base64.b64decode(conteudo_base64).decode()
+        mesa_data = json.loads(conteudo)
+        mesa_data["arquivo"] = nome_arquivo  # Adiciona o nome do arquivo para referência
+        return mesa_data
+    else:
+        return None
+
+# ===== FUNÇÃO: CRIAR NOVA MESA =====
+def criar_mesa(nome_mesa, descricao, mestre):
+    """
+    Cria uma nova mesa de RPG.
+    
+    Args:
+        nome_mesa (str): Nome da mesa
+        descricao (str): Descrição da mesa
+        mestre (str): Nome do mestre da mesa
+        
+    Returns:
+        tuple: (sucesso, mensagem)
+    """
+    # Gera um ID único para a mesa baseado no timestamp
+    import time
+    id_mesa = int(time.time())
+    
+    # Nome do arquivo será baseado no ID da mesa
+    nome_arquivo = f"mesa_{id_mesa}.json"
+    
+    # Estrutura da nova mesa
+    nova_mesa = {
+        "id": id_mesa,
+        "nome": nome_mesa,
+        "descricao": descricao,
+        "mestre": mestre,
+        "jogadores": [],
+        "max_jogadores": 6,
+        "data_criacao": time.strftime("%Y-%m-%d %H:%M:%S"),
+        "status": "ativa",
+        "configuracoes": {
+            "sistema": "Tenebris RPG",
+            "nivel_inicial": 1,
+            "modo_jogo": "campanha"
+        }
+    }
+    
+    # Salva a nova mesa no GitHub
+    if salvar_mesa(nome_arquivo, nova_mesa):
+        return True, f"Mesa '{nome_mesa}' criada com sucesso! ID: {id_mesa}"
+    else:
+        return False, "Erro ao criar a mesa."
+
+# ===== FUNÇÃO: SALVAR MESA NO GITHUB =====
+def salvar_mesa(nome_arquivo, dados_mesa):
+    """
+    Salva uma mesa no diretório mesas do GitHub.
+    
+    Args:
+        nome_arquivo (str): Nome do arquivo JSON
+        dados_mesa (dict): Dados da mesa
+        
+    Returns:
+        bool: True se salvou com sucesso, False caso contrário
+    """
+    url = f"https://api.github.com/repos/{REPO}/contents/mesas/{nome_arquivo}"
+    
+    headers = {
+        "Authorization": f"token {TOKEN}",
+        "Accept": "application/vnd.github.v3+json"
+    }
+    
+    # Converte os dados para JSON
+    conteudo_json = json.dumps(dados_mesa, indent=2, ensure_ascii=False)
+    conteudo_base64 = base64.b64encode(conteudo_json.encode('utf-8')).decode('utf-8')
+    
+    # Dados para criar o arquivo
+    dados = {
+        "message": f"Nova mesa criada: {dados_mesa['nome']}",
+        "content": conteudo_base64,
+        "branch": BRANCH
+    }
+    
+    response = requests.put(url, headers=headers, json=dados)
+    return response.status_code == 201  # 201 = Created
+
+# ===== FUNÇÃO: ENTRAR NA MESA =====
+def entrar_mesa(mesa_data):
+    """
+    Permite ao usuário entrar em uma mesa específica.
+    
+    Args:
+        mesa_data (dict): Dados da mesa
+    """
+    # Armazena a mesa atual no estado da sessão
+    st.session_state["mesa_atual"] = mesa_data
+    st.session_state["na_mesa"] = True
+    st.rerun()
+
+# ===== FUNÇÃO: INTERFACE DA MESA =====
+def interface_mesa():
+    """
+    Renderiza a interface de uma mesa específica.
+    """
+    if "mesa_atual" not in st.session_state:
+        st.error("Erro: Mesa não encontrada.")
+        return
+    
+    mesa = st.session_state["mesa_atual"]
+    
+    # Cabeçalho da mesa
+    st.title(f"🎲 {mesa['nome']}")
+    st.markdown(f"**Mestre:** {mesa['mestre']}")
+    st.markdown(f"**Descrição:** {mesa['descricao']}")
+    
+    # Informações da mesa
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        st.metric("Jogadores", f"{len(mesa['jogadores'])}/{mesa['max_jogadores']}")
+    
+    with col2:
+        st.metric("Status", mesa['status'].title())
+    
+    with col3:
+        st.metric("Sistema", mesa['configuracoes']['sistema'])
+    
+    # Lista de jogadores
+    st.subheader("👥 Jogadores")
+    if mesa['jogadores']:
+        for jogador in mesa['jogadores']:
+            st.markdown(f"• {jogador}")
+    else:
+        st.info("Nenhum jogador na mesa ainda.")
+    
+    # Botões de ação
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        if st.button("🚪 Voltar às Mesas"):
+            st.session_state["na_mesa"] = False
+            st.session_state["mesa_atual"] = None
+            st.rerun()
+    
+    with col2:
+        # Aqui você pode adicionar mais funcionalidades da mesa
+        st.button("⚙️ Configurações da Mesa", disabled=True)
+    
+    # Área de chat/interação (placeholder)
+    st.subheader("💬 Chat da Mesa")
+    st.info("Sistema de chat em desenvolvimento...")
+
+# ===== FUNÇÃO: PÁGINA DE MESAS =====
+def mesas():
+    """
+    Renderiza a página de mesas com lista de mesas e opção de criar nova mesa.
+    """
+    st.title("🎲 Mesas de RPG")
+    
+    # Verifica se está dentro de uma mesa
+    if st.session_state.get("na_mesa", False):
+        interface_mesa()
+        return
+    
+    # Botão para criar nova mesa
+    col1, col2 = st.columns([3, 1])
+    
+    with col2:
+        if st.button("➕ Criar Mesa", type="primary"):
+            st.session_state["criando_mesa"] = True
+    
+    # Modal para criar mesa
+    if st.session_state.get("criando_mesa", False):
+        st.subheader("📝 Criar Nova Mesa")
+        
+        with st.form("form_criar_mesa"):
+            nome_mesa = st.text_input("Nome da Mesa", placeholder="Ex: Aventura na Floresta Sombria")
+            descricao = st.text_area("Descrição", placeholder="Descreva a aventura, cenário, etc.")
+            
+            # Colunas para os botões
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                criar = st.form_submit_button("🎲 Criar Mesa", type="primary")
+            
+            with col2:
+                cancelar = st.form_submit_button("❌ Cancelar")
+            
+            if criar:
+                if nome_mesa and descricao:
+                    mestre = st.session_state["usuario"]
+                    sucesso, mensagem = criar_mesa(nome_mesa, descricao, mestre)
+                    
+                    if sucesso:
+                        st.success(mensagem)
+                        st.session_state["criando_mesa"] = False
+                        st.rerun()
+                    else:
+                        st.error(mensagem)
+                else:
+                    st.error("Por favor, preencha todos os campos.")
+            
+            if cancelar:
+                st.session_state["criando_mesa"] = False
+                st.rerun()
+    
+    # Lista de mesas
+    st.subheader("📋 Mesas Disponíveis")
+    
+    # Carrega as mesas
+    mesas_list = carregar_mesas()
+    
+    if not mesas_list:
+        st.info("Nenhuma mesa encontrada. Seja o primeiro a criar uma mesa!")
+    else:
+        # Exibe cada mesa
+        for mesa in mesas_list:
+            with st.container():
+                st.markdown("---")
+                
+                # Layout da mesa
+                col1, col2 = st.columns([4, 1])
+                
+                with col1:
+                    st.markdown(f"### 🎲 {mesa['nome']}")
+                    st.markdown(f"**Mestre:** {mesa['mestre']}")
+                    st.markdown(f"**Descrição:** {mesa['descricao']}")
+                    
+                    # Informações extras
+                    info_col1, info_col2, info_col3 = st.columns(3)
+                    
+                    with info_col1:
+                        st.caption(f"👥 {len(mesa['jogadores'])}/{mesa['max_jogadores']} jogadores")
+                    
+                    with info_col2:
+                        st.caption(f"📅 {mesa['data_criacao']}")
+                    
+                    with info_col3:
+                        status_color = "🟢" if mesa['status'] == "ativa" else "🔴"
+                        st.caption(f"{status_color} {mesa['status'].title()}")
+                
+                with col2:
+                    # Botão para entrar na mesa
+                    if st.button("🚪 Entrar", key=f"entrar_{mesa['id']}"):
+                        entrar_mesa(mesa)
+                    
+                    # Botão de informações (opcional)
+                    if st.button("ℹ️ Info", key=f"info_{mesa['id']}"):
+                        st.session_state[f"show_info_{mesa['id']}"] = True
+                
+                # Modal de informações detalhadas (opcional)
+                if st.session_state.get(f"show_info_{mesa['id']}", False):
+                    with st.expander("ℹ️ Informações Detalhadas", expanded=True):
+                        st.json(mesa)
+                        if st.button("Fechar", key=f"close_{mesa['id']}"):
+                            st.session_state[f"show_info_{mesa['id']}"] = False
+                            st.rerun()
+
+# ===== INICIALIZAÇÃO DE ESTADOS PARA MESAS =====
+# Adicione essas linhas no final do seu arquivo, junto com as outras inicializações de estado
+
+# Estado para controlar se está criando uma mesa
+if "criando_mesa" not in st.session_state:
+    st.session_state["criando_mesa"] = False
+
+# Estado para controlar se está dentro de uma mesa
+if "na_mesa" not in st.session_state:
+    st.session_state["na_mesa"] = False
+
+# Estado para armazenar a mesa atual
+if "mesa_atual" not in st.session_state:
+    st.session_state["mesa_atual"] = None
 
 
 # ===== FUNÇÃO: PÁGINA PRINCIPAL =====
 def home():
     st.title("EM DESENVOLVIMENTO")
-# ===== FUNÇÃO: PÁGINA PRINCIPAL =====
+
+
+
+
+# ===== FUNÇÃO: SIDEBAR =====
 def pagina_principal():
     """
     Renderiza a página principal após o login.
@@ -371,7 +701,7 @@ def pagina_principal():
     """
     
     # Menu lateral estilo lista
-    pagina = st.sidebar.radio("Navegação", ["🌒 Bem-vindo", "🎲 Mesas", "⚙️ Configurações"])
+    pagina = st.sidebar.radio("Navegação", ["🌒 Home", "🎲 Mesas", "⚙️ Configurações"])
 
     # Conteúdo da página
     st.title(pagina)
@@ -380,7 +710,7 @@ def pagina_principal():
         home()
 
     elif "Mesas" in pagina:
-        st.write("Aqui estão as mesas de RPG.")
+        mesas()
 
     elif "Configurações" in pagina:
         st.write("Altere as configurações do sistema.")
