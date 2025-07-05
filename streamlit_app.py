@@ -355,6 +355,12 @@ def pagina_login():
                 # Campos em branco
                 st.warning("Por favor, preencha todos os campos.")
 
+
+
+
+# ===== FUNÇÃO: PÁGINA PRINCIPAL =====
+def home():
+    st.title("🌒 Bem-vindo ao Tenebris RPG")
 # ===== FUNÇÃO: PÁGINA PRINCIPAL =====
 def pagina_principal():
     """
@@ -364,10 +370,6 @@ def pagina_principal():
     oferece a opção de logout.
     """
     
-    st.title("Página Principal")
-        # Mensagem de boas-vindas personalizada
-    st.write(f"Bem-vindo, {st.session_state['usuario']}! Saiba que você é o ser mais desprezível do mundo, eu odeio você seu pedaço de merda ambulante (me estessei fazendo codio de novo)")
-    
     # Menu lateral estilo lista
     pagina = st.sidebar.radio("Navegação", ["🏠 Início", "🎲 Mesas", "⚙️ Configurações"])
 
@@ -375,7 +377,7 @@ def pagina_principal():
     st.title(pagina)
 
     if "Início" in pagina:
-        st.write("Bem-vindo ao Tenebris RPG!")
+        home()
 
     elif "Mesas" in pagina:
         st.write("Aqui estão as mesas de RPG.")
