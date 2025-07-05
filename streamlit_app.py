@@ -3,7 +3,7 @@ import requests
 import base64
 import json
 import hashlib
-
+from home import *
 # ===== INSTRUÇÕES DE CONFIGURAÇÃO =====
 #"""
 # 🔧 COMO CONFIGURAR ESTE SISTEMA:
