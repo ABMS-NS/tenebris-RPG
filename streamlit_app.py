@@ -634,15 +634,15 @@ def mesas():
                 col1, col2 = st.columns([4, 1])
                 
                 with col1:
-                    st.markdown(f"### 🎲 {mesa['nome']}")
-                    st.markdown(f"**Mestre:** {mesa['mestre']}")
-                    st.markdown(f"**Descrição:** {mesa['descricao']}")
+                    st.markdown(f"### 🎲 {mesa.get('nome', 'Mesa sem nome')}")
+                    st.markdown(f"**Mestre:** {mesa.get('mestre', 'Sem mestre')}")
+                    st.markdown(f"**Descrição:** {mesa.get('descricao', 'Sem descrição')}")
                     
                     # Informações extras
                     info_col1, info_col2, info_col3 = st.columns(3)
                     
                     with info_col1:
-                        st.caption(f"👥 {len(mesa['jogadores'])}/{mesa['max_jogadores']} jogadores")
+                        st.caption(f"👥 {len(mesa.get('jogadores', []))}/{mesa.get('max_jogadores', 6)} jogadores")
                     
                     with info_col2:
                         st.caption(f"📅 {mesa['data_criacao']}")
