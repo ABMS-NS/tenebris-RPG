@@ -411,4 +411,3 @@ else:
     # Usuário está logado - mostra área restrita
     # Redireciona para a página "Home" (nome do arquivo: 1_Home.py)
     st.markdown('<meta http-equiv="refresh" content="0;url=/1_Home">', unsafe_allow_html=True)
-    st.stop()
