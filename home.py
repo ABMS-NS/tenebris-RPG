@@ -5,11 +5,16 @@ def home():
     # CSS customizado para estilização
     st.markdown("""
     <style>
+    .stApp {
+        background-color: #0e1117;
+        color: #fafafa;
+    }
+    
     .main-title {
         font-size: 3.5rem;
         font-weight: bold;
         text-align: center;
-        color: #8B0000;
+        color: #ff6b6b;
         text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
         margin-bottom: 0;
     }
@@ -17,7 +22,7 @@ def home():
     .subtitle {
         font-size: 1.1rem;
         text-align: center;
-        color: #666;
+        color: #b0b0b0;
         margin-bottom: 2rem;
         font-style: italic;
     }
@@ -26,39 +31,43 @@ def home():
         background: linear-gradient(135deg, #1a1a1a, #2d2d2d);
         padding: 2rem;
         border-radius: 15px;
-        border: 2px solid #8B0000;
+        border: 2px solid #ff6b6b;
         margin: 2rem 0;
         color: white;
         text-align: center;
     }
     
     .menu-card {
-        background: #f8f9fa;
+        background: linear-gradient(135deg, #262626, #3d3d3d);
         padding: 1.5rem;
         border-radius: 10px;
-        border-left: 5px solid #8B0000;
+        border-left: 5px solid #4A90E2;
         margin: 1rem 0;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        box-shadow: 0 4px 6px rgba(0,0,0,0.3);
         transition: transform 0.2s;
+        color: #fafafa;
     }
     
     .menu-card:hover {
         transform: translateY(-2px);
+        background: linear-gradient(135deg, #2d2d2d, #404040);
     }
     
     .quick-access {
-        background: #e9ecef;
+        background: linear-gradient(135deg, #1e1e1e, #2a2a2a);
         padding: 1.5rem;
         border-radius: 10px;
         margin: 1rem 0;
+        border: 1px solid #404040;
+        color: #fafafa;
     }
     
     .footer {
         text-align: center;
-        color: #666;
+        color: #b0b0b0;
         margin-top: 3rem;
         padding-top: 2rem;
-        border-top: 1px solid #ddd;
+        border-top: 1px solid #404040;
     }
     </style>
     """, unsafe_allow_html=True)
