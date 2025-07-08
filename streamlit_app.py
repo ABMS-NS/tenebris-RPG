@@ -410,4 +410,4 @@ if not st.session_state["logado"]:
 else:
     # Usuário está logado - mostra área restrita
     # Redireciona para a página "Home" (nome do arquivo: home.py)
-    home()
+    home(st.session_state["usuario"])
