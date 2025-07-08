@@ -4,7 +4,7 @@ from mesas import display_mesas
 
 def home(usuario):
     st.title("HOME")
-
+    st.divider()
     col1, col2, col3 = st.columns(3)
 
     with col1:
